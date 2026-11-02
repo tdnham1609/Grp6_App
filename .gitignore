@@ -49,3 +49,34 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Node.js / Firebase Functions
+node_modules/
+functions/node_modules/
+functions/npm-debug.log*
+functions/yarn-debug.log*
+functions/yarn-error.log*
+.npm/
+
+# Firebase emulator artifacts and local secrets
+.firebase/
+.firebase-demo-data/
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
+.functions-*/
+
+# IDE and analyzer artifacts
+.vscode/
+.PVS-Studio/
+
+# Generated build outputs
+**/build/
+**/dist/
+**/coverage/
+
+# Emulator screenshots and exported data
+/emulator_screen.png
+emulator_screen_*.png
+*firebase*-data/
