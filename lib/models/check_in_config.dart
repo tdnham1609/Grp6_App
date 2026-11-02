@@ -21,6 +21,8 @@ class CheckInConfig {
   final int intervalHours;
   final int reminderMinutesBefore;
   final bool isReminderEnabled;
+  final bool isDeadManSwitchActive;
+  final int gracePeriodMinutes;
   final DateTime? lastCheckInAt;
   final DateTime? nextCheckInDueAt;
   final DateTime updatedAt;
@@ -29,6 +31,8 @@ class CheckInConfig {
     this.intervalHours = 24,
     this.reminderMinutesBefore = 120, // 2 giờ trước hạn
     this.isReminderEnabled = true,
+    this.isDeadManSwitchActive = true,
+    this.gracePeriodMinutes = 180,
     this.lastCheckInAt,
     this.nextCheckInDueAt,
     required this.updatedAt,
@@ -40,6 +44,8 @@ class CheckInConfig {
       intervalHours: 24,
       reminderMinutesBefore: 120,
       isReminderEnabled: true,
+      isDeadManSwitchActive: true,
+      gracePeriodMinutes: 180,
       updatedAt: DateTime.now(),
     );
   }
@@ -110,6 +116,8 @@ class CheckInConfig {
       'intervalHours': intervalHours,
       'reminderMinutesBefore': reminderMinutesBefore,
       'isReminderEnabled': isReminderEnabled,
+      'isDeadManSwitchActive': isDeadManSwitchActive,
+      'gracePeriodMinutes': gracePeriodMinutes,
       'lastCheckInAt': lastCheckInAt != null
           ? Timestamp.fromDate(lastCheckInAt!)
           : null,
@@ -133,6 +141,10 @@ class CheckInConfig {
       reminderMinutesBefore:
           (data['reminderMinutesBefore'] as num?)?.toInt() ?? 120,
       isReminderEnabled: data['isReminderEnabled'] as bool? ?? true,
+      isDeadManSwitchActive:
+          data['isDeadManSwitchActive'] as bool? ?? true,
+      gracePeriodMinutes:
+          (data['gracePeriodMinutes'] as num?)?.toInt() ?? 180,
       lastCheckInAt: _parseDateTime(
         data['lastCheckInAt'] ?? data['last_checkin_at'],
       ),
@@ -152,6 +164,8 @@ class CheckInConfig {
       'interval_hours': intervalHours,
       'reminder_minutes': reminderMinutesBefore,
       'is_reminder_enabled': isReminderEnabled ? 1 : 0,
+      'is_deadman_active': isDeadManSwitchActive ? 1 : 0,
+      'grace_period_minutes': gracePeriodMinutes,
       'last_checkin_at': lastCheckInAt?.toIso8601String(),
       'next_due_at': nextCheckInDueAt?.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -164,6 +178,9 @@ class CheckInConfig {
       intervalHours: row['interval_hours'] as int? ?? 24,
       reminderMinutesBefore: row['reminder_minutes'] as int? ?? 120,
       isReminderEnabled: (row['is_reminder_enabled'] as int? ?? 1) == 1,
+      isDeadManSwitchActive:
+          (row['is_deadman_active'] as int? ?? 1) == 1,
+      gracePeriodMinutes: row['grace_period_minutes'] as int? ?? 180,
       lastCheckInAt: row['last_checkin_at'] != null
           ? DateTime.tryParse(row['last_checkin_at'] as String)
           : null,
@@ -188,6 +205,8 @@ class CheckInConfig {
     int? intervalHours,
     int? reminderMinutesBefore,
     bool? isReminderEnabled,
+    bool? isDeadManSwitchActive,
+    int? gracePeriodMinutes,
     DateTime? lastCheckInAt,
     DateTime? nextCheckInDueAt,
     DateTime? updatedAt,
@@ -197,6 +216,9 @@ class CheckInConfig {
       reminderMinutesBefore:
           reminderMinutesBefore ?? this.reminderMinutesBefore,
       isReminderEnabled: isReminderEnabled ?? this.isReminderEnabled,
+      isDeadManSwitchActive:
+          isDeadManSwitchActive ?? this.isDeadManSwitchActive,
+      gracePeriodMinutes: gracePeriodMinutes ?? this.gracePeriodMinutes,
       lastCheckInAt: lastCheckInAt ?? this.lastCheckInAt,
       nextCheckInDueAt: nextCheckInDueAt ?? this.nextCheckInDueAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -25,7 +25,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE check_ins (
@@ -50,7 +50,9 @@ class DatabaseService {
             longitude REAL,
             accuracy REAL,
             location_timestamp TEXT,
-            is_location_sharing_enabled INTEGER NOT NULL DEFAULT 0
+            is_location_sharing_enabled INTEGER NOT NULL DEFAULT 0,
+            is_deadman_active INTEGER NOT NULL DEFAULT 1,
+            grace_period_minutes INTEGER NOT NULL DEFAULT 180
           )
         ''');
 
@@ -142,6 +144,24 @@ class DatabaseService {
               updated_at TEXT NOT NULL
             )
           ''');
+        }
+
+        if (oldVersion < 6) {
+          final tableInfo = await db.rawQuery("PRAGMA table_info('user_settings')");
+          final existingColumns = tableInfo
+              .map((col) => col['name'] as String)
+              .toSet();
+
+          if (!existingColumns.contains('is_deadman_active')) {
+            await db.execute(
+              'ALTER TABLE user_settings ADD COLUMN is_deadman_active INTEGER NOT NULL DEFAULT 1',
+            );
+          }
+          if (!existingColumns.contains('grace_period_minutes')) {
+            await db.execute(
+              'ALTER TABLE user_settings ADD COLUMN grace_period_minutes INTEGER NOT NULL DEFAULT 180',
+            );
+          }
         }
 
         if (oldVersion < 5) {
