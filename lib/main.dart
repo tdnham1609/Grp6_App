@@ -14,9 +14,9 @@ Future<void> main() async {
 
   const useFirebaseEmulators = bool.fromEnvironment(
     'USE_FIREBASE_EMULATORS',
-    defaultValue: true,
+    defaultValue: false,
   );
-  if (kDebugMode && useFirebaseEmulators) {
+  if (useFirebaseEmulators) {
     final host = defaultTargetPlatform == TargetPlatform.android
         ? '10.0.2.2'
         : '127.0.0.1';

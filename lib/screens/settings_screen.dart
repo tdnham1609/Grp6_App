@@ -26,7 +26,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   static const _useFirebaseEmulators = bool.fromEnvironment(
     'USE_FIREBASE_EMULATORS',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   final _configService = CheckInConfigService.instance;
