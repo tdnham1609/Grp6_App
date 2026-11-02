@@ -24,7 +24,7 @@ export async function processSingleUserCheckIn(params: {
   eventId?: string;
   recipientsCount?: number;
 }> {
-  const { db, userRef, settingsDoc, now, ignorePreviousAlerts = false } = params;
+  const { db, userRef, settingsDoc, now } = params;
   const emailService = params.emailService || new EmailService();
   const nowTimestamp = Timestamp.fromDate(now);
   const uid = userRef.id;
@@ -42,14 +42,14 @@ export async function processSingleUserCheckIn(params: {
     .limit(1)
     .get();
 
-  const existingAlertDoc = recentAlertsSnapshot.docs[0];
-  const existingAlert = existingAlertDoc
-    ? (existingAlertDoc.data() as AlertEvent)
+  const recentAlert = recentAlertsSnapshot.docs[0]?.data() as AlertEvent | undefined;
+  const existingAlert = recentAlert?.checkInDueAt.toMillis() === settings.nextCheckInDueAt.toMillis()
+    ? recentAlert
     : null;
 
   const dueDate = settings.nextCheckInDueAt.toDate();
   const eventId = `event_${dueDate.getTime()}`;
-  const targetEventRef = alertEventsRef.doc(eventId);
+  let targetEventRef = alertEventsRef.doc(eventId);
 
   // 1. Đọc và lọc danh bạ khẩn cấp trước khi vào transaction
   // Ràng buộc bảo mật: Chỉ liên hệ Active + Email Verified + Consent Accepted
@@ -82,6 +82,10 @@ export async function processSingleUserCheckIn(params: {
 
     const freshSettings = freshSettingsSnap.data() as CheckInSettings;
     freshSettingsSnapshot = freshSettings;
+    if (freshSettings.nextCheckInDueAt) {
+      const freshDueDate = freshSettings.nextCheckInDueAt.toDate();
+      targetEventRef = alertEventsRef.doc(`event_${freshDueDate.getTime()}`);
+    }
     if (freshSettings.isDeadManSwitchActive === false || !freshSettings.nextCheckInDueAt) {
       evaluatedAction = 'NO_ACTION';
       return;
@@ -90,9 +94,7 @@ export async function processSingleUserCheckIn(params: {
     const targetEventSnap = await transaction.get(targetEventRef);
     const freshAlert = targetEventSnap.exists
       ? (targetEventSnap.data() as AlertEvent)
-      : ignorePreviousAlerts
-        ? null
-        : existingAlert;
+      : null;
 
     // Đánh giá an toàn cốt lõi
     const evaluation = evaluateDeadManSwitch({
@@ -182,8 +184,8 @@ export async function processSingleUserCheckIn(params: {
       }
 
       case 'CANCEL_ALERT': {
-        if (existingAlertDoc) {
-          transaction.update(existingAlertDoc.ref, {
+        if (targetEventRef && existingAlert && existingAlert.status !== 'cancelled') {
+          transaction.update(targetEventRef, {
             status: 'cancelled',
             resolvedAt: nowTimestamp,
             cancellationReason: evaluation.reason,

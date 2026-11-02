@@ -183,6 +183,8 @@ void main() {
       expect(map['intervalHours'], equals(12));
       expect(map['reminderMinutesBefore'], equals(30));
       expect(map['isReminderEnabled'], isFalse);
+      expect(map['isDeadManSwitchActive'], isTrue);
+      expect(map['gracePeriodMinutes'], equals(180));
       expect(map['lastCheckInAt'], isA<Timestamp>());
       expect(map['nextCheckInDueAt'], isA<Timestamp>());
 
@@ -190,6 +192,8 @@ void main() {
       expect(restored.intervalHours, equals(12));
       expect(restored.reminderMinutesBefore, equals(30));
       expect(restored.isReminderEnabled, isFalse);
+      expect(restored.isDeadManSwitchActive, isTrue);
+      expect(restored.gracePeriodMinutes, equals(180));
       expect(restored.lastCheckInAt, equals(t0));
       expect(
         restored.nextCheckInDueAt,
