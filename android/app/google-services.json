@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "968316148144",
+    "project_id": "sinhtuapp",
+    "storage_bucket": "sinhtuapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968316148144:android:b1e90efb249d0151ad1e75",
+        "android_client_info": {
+          "package_name": "com.example.deadmansswitch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "968316148144-q1jf8dfhnlv72eekpos3boif8ufnm8nm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.deadmansswitch",
+            "certificate_hash": "0cc50874779deca2599469271dd7eccf6e9b8827"
+          }
+        },
+        {
+          "client_id": "968316148144-1fakb6qd0ih48pvhmtutsphqh70k76fd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCL2BuVHJ3QzPZmU9THnNxLh2fSJV4AGUk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "968316148144-1fakb6qd0ih48pvhmtutsphqh70k76fd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,187 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Quy tắc mặc định: từ chối tất cả ─────────────────────────────────
+    // Tất cả collection không được khai báo rõ ràng đều bị từ chối
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── Collection: users/{uid} ────────────────────────────────────────────
+    // Mỗi người dùng chỉ được đọc và ghi hồ sơ của chính mình
+    match /users/{uid} {
+
+      // Điều kiện: người dùng đã đăng nhập VÀ uid trùng với auth.uid
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      // Kiểm tra các trường được phép cập nhật (không cho sửa uid, email, createdAt)
+      function isValidUpdate() {
+        let allowedFields = ['displayName', 'photoUrl', 'updatedAt'];
+        let changedFields = request.resource.data.diff(resource.data).affectedKeys();
+        return changedFields.hasOnly(allowedFields);
+      }
+
+      // Kiểm tra dữ liệu hợp lệ khi tạo mới hồ sơ
+      function isValidCreate() {
+        let data = request.resource.data;
+        return data.uid is string
+          && data.uid == uid  // uid trong document phải trùng với document ID
+          && data.email is string
+          && data.displayName is string
+          && data.provider is string
+          && (data.provider == 'password' || data.provider == 'google')
+          && !('password' in data)    // Không lưu mật khẩu
+          && !('idToken' in data)     // Không lưu token
+          && !('accessToken' in data);
+      }
+
+      // ĐỌC: chỉ chủ tài khoản
+      allow read: if isOwner();
+
+      // TẠO MỚI: chỉ chủ tài khoản, dữ liệu hợp lệ
+      allow create: if isOwner() && isValidCreate();
+
+      // CẬP NHẬT: chỉ chủ tài khoản, chỉ các trường được phép
+      allow update: if isOwner() && isValidUpdate();
+
+      // XÓA: không cho phép
+      allow delete: if false;
+
+      // ─── Sub-collection: users/{uid}/checkins/{checkinId} ─────────────────
+      // Quản lý lịch sử điểm danh an toàn của người dùng
+      match /checkins/{checkinId} {
+
+        // Kiểm tra dữ liệu đầu vào của bản ghi check-in
+        function isValidCheckIn() {
+          let data = request.resource.data;
+          return data.uid is string
+            && data.uid == uid                   // Bắt buộc uid trùng với uid trong đường dẫn
+            && data.id is string
+            && data.id == checkinId              // id phải trùng khớp Document ID
+            && data.checkedInAt is timestamp     // Thời điểm check-in hợp lệ
+            && data.createdAt is timestamp;      // Thời điểm tạo hợp lệ
+        }
+
+        // ĐỌC: chỉ chủ sở hữu
+        allow read: if isOwner();
+
+        // TẠO MỚI: chỉ chủ sở hữu và dữ liệu hợp lệ
+        allow create: if isOwner() && isValidCheckIn();
+
+        // CẬP NHẬT: chỉ chủ sở hữu và dữ liệu hợp lệ (hỗ trợ upsert / retry đồng bộ)
+        allow update: if isOwner() && isValidCheckIn();
+
+        // XÓA: không cho phép xóa lịch sử để đảm bảo tính toàn vẹn dữ liệu
+        allow delete: if false;
+      }
+
+      // ─── Sub-collection: users/{uid}/settings/{settingId} ─────────────────
+      // Quản lý cấu hình chu kỳ check-in và cài đặt nhắc nhở an toàn
+      match /settings/{settingId} {
+
+        // Validate dữ liệu cấu hình chu kỳ check-in
+        function isValidCheckInConfig() {
+          let data = request.resource.data;
+          return data.intervalHours is int
+            && data.intervalHours >= 1
+            && data.intervalHours <= 720         // Giới hạn chu kỳ từ 1 giờ đến 30 ngày
+            && data.reminderMinutesBefore is int
+            && data.reminderMinutesBefore >= 0
+            && data.isReminderEnabled is bool
+            && data.updatedAt is timestamp;
+        }
+
+        // ĐỌC: chỉ chủ sở hữu
+        allow read: if isOwner();
+
+        // TẠO MỚI / CẬP NHẬT: chỉ chủ sở hữu và payload hợp lệ
+        allow create, update: if isOwner() && (settingId != 'checkin' || isValidCheckInConfig());
+
+        // XÓA: không cho phép xóa cấu hình
+        allow delete: if false;
+      }
+
+      // ─── Sub-collection: users/{uid}/alert_events/{eventId} ───────────────
+      // Nhật ký sự kiện cảnh báo của máy chủ (Dead Man's Switch Engine)
+      match /alert_events/{eventId} {
+        // ĐỌC: Người dùng chỉ được đọc để biết trạng thái máy chủ đã xác nhận
+        allow read: if isOwner();
+
+        // GHI / SỬA / XÓA: Cấm hoàn toàn từ client. Chỉ Firebase Admin SDK (Cloud Functions) mới có quyền ghi
+        allow write: if false;
+      }
+
+      // ─── Sub-collection: users/{uid}/emergency_contacts/{contactId} ───────
+      // Quản lý danh bạ khẩn cấp nhận thông báo khi người dùng quá hạn
+      match /emergency_contacts/{contactId} {
+
+        // Validate dữ liệu khi tạo mới liên hệ
+        function isValidContactCreate() {
+          let data = request.resource.data;
+          return data.uid is string
+            && data.uid == uid                   // Bắt buộc trùng với uid đường dẫn
+            && data.id is string
+            && data.id == contactId              // Bắt buộc trùng với Document ID
+            && data.name is string
+            && data.name.size() >= 2
+            && data.name.size() <= 60            // Giới hạn độ dài tên
+            && data.email is string
+            && data.email.size() >= 5
+            && data.email.size() <= 100          // Giới hạn độ dài email
+            && (data.phoneNumber == null || (data.phoneNumber is string && data.phoneNumber.size() <= 20))
+            && data.relationship is string
+            && data.relationship.size() <= 40
+            && data.emailVerified is bool
+            && data.emailVerified == false       // Client TUYỆT ĐỐI không được tự đặt emailVerified = true
+            && data.consentStatus is string
+            && data.consentStatus == 'pending'   // Client TUYỆT ĐỐI không được tự đặt consentStatus = 'accepted'
+            && data.isActive is bool
+            && data.createdAt is timestamp
+            && data.updatedAt is timestamp;
+        }
+
+        // Validate khi cập nhật: Không cho phép client tự sửa emailVerified = true hoặc consentStatus = 'accepted'
+        function isValidContactUpdate() {
+          let data = request.resource.data;
+          let oldData = resource.data;
+          return data.uid == uid
+            && data.id == contactId
+            && data.name is string && data.name.size() >= 2 && data.name.size() <= 60
+            && data.email is string && data.email.size() >= 5 && data.email.size() <= 100
+            && (data.phoneNumber == null || (data.phoneNumber is string && data.phoneNumber.size() <= 20))
+            && data.relationship is string
+            && data.isActive is bool
+            && data.updatedAt is timestamp
+            // Client không được tự ý lật cờ emailVerified từ false thành true
+            && (data.emailVerified == oldData.emailVerified || (data.emailVerified == false))
+            // Client không được tự ý đổi consentStatus từ pending thành accepted
+            && (data.consentStatus == oldData.consentStatus || (data.consentStatus == 'pending'));
+        }
+
+        // ĐỌC: chỉ chủ sở hữu
+        allow read: if isOwner();
+
+        // TẠO MỚI: chỉ chủ sở hữu và dữ liệu hợp lệ
+        allow create: if isOwner() && isValidContactCreate();
+
+        // CẬP NHẬT: chỉ chủ sở hữu và không được giả mạo server verification
+        allow update: if isOwner() && isValidContactUpdate();
+
+        // XÓA: chỉ chủ sở hữu được xóa liên hệ của mình
+        allow delete: if isOwner();
+      }
+    }
+
+    // ─── Collection: verification_tokens/{tokenHash} ─────────────────────────────
+    // Lưu trữ token xác minh email và consent hash (SHA-256).
+    // CHỈ CÓ CLOUD FUNCTIONS (Firebase Admin SDK) mới có quyền truy cập.
+    // Cấm hoàn toàn mọi yêu cầu đọc/ghi trực tiếp từ phía client để bảo mật tuyệt đối.
+    match /verification_tokens/{tokenHash} {
+      allow read, write: if false;
+    }
+  }
+}
