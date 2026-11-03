@@ -147,7 +147,9 @@ class DatabaseService {
         }
 
         if (oldVersion < 6) {
-          final tableInfo = await db.rawQuery("PRAGMA table_info('user_settings')");
+          final tableInfo = await db.rawQuery(
+            "PRAGMA table_info('user_settings')",
+          );
           final existingColumns = tableInfo
               .map((col) => col['name'] as String)
               .toSet();

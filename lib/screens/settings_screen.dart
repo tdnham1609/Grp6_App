@@ -860,7 +860,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _notificationsEnabled,
                         'Mở quyền thông báo',
                         () async {
-                          await NotificationService.instance.requestPermission();
+                          await NotificationService.instance
+                              .requestPermission();
                           await _loadSafetyHealth();
                         },
                       ),

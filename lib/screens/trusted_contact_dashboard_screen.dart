@@ -86,7 +86,11 @@ class _TrustedContactDashboardScreenState
       return ListView(
         children: [
           const SizedBox(height: 80),
-          const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.redAccent),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 48,
+            color: Colors.redAccent,
+          ),
           const SizedBox(height: 12),
           const Text('Không thể tải dashboard', textAlign: TextAlign.center),
           Padding(
@@ -163,19 +167,28 @@ class _TrustedContactDashboardScreenState
                         color: Color(0xFF082F49),
                       ),
                     ),
-                    Text(person.relationship, style: const TextStyle(fontSize: 12)),
+                    Text(
+                      person.relationship,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: status.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   status.label,
-                  style: TextStyle(color: status.color, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: status.color,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -208,7 +221,10 @@ class _TrustedContactDashboardScreenState
         const SizedBox(width: 8),
         Text('$label: ', style: const TextStyle(color: Color(0xFF52717D))),
         Expanded(
-          child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     );

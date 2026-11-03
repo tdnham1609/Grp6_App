@@ -99,8 +99,8 @@ class _OfflineSyncBannerState extends State<OfflineSyncBanner> {
                     _isOffline
                         ? 'Ngoại tuyến • $_pendingCount bản ghi đang chờ đồng bộ'
                         : _isSyncing
-                            ? 'Đang đồng bộ $_pendingCount bản ghi…'
-                            : 'Đã mạng trở lại • $_pendingCount bản ghi chờ đồng bộ',
+                        ? 'Đang đồng bộ $_pendingCount bản ghi…'
+                        : 'Đã mạng trở lại • $_pendingCount bản ghi chờ đồng bộ',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,

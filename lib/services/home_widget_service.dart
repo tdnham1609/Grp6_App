@@ -29,7 +29,10 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
 
   final result = await CheckInService.instance.recordCheckIn();
   await HomeWidgetService.instance.updateStatusFromConfig();
-  await HomeWidgetService.instance.saveAndUpdate(result.checkIn.checkedInAt, null);
+  await HomeWidgetService.instance.saveAndUpdate(
+    result.checkIn.checkedInAt,
+    null,
+  );
 }
 
 class HomeWidgetService {
@@ -64,8 +67,8 @@ class HomeWidgetService {
     final status = config?.getRemainingFormatted() ?? 'Chưa có lịch xác nhận';
     final lastCheckIn = checkedInAt == null
         ? (config?.lastCheckInAt == null
-            ? ''
-            : 'Lần cuối: ${_formatDate(config!.lastCheckInAt!)}')
+              ? ''
+              : 'Lần cuối: ${_formatDate(config!.lastCheckInAt!)}')
         : 'Lần cuối: ${_formatDate(checkedInAt)}';
 
     await HomeWidget.saveWidgetData<String>('widget_status', status);

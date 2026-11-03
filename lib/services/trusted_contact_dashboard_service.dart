@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/check_in_config.dart';
 
 class TrustedPerson {
@@ -62,9 +63,14 @@ class TrustedContactDashboardService {
       final data = document.data();
       final nextDue = data['nextCheckInDueAt'] as Timestamp?;
       final lastCheckIn = data['lastCheckInAt'] as Timestamp?;
-      final overdue = nextDue != null && nextDue.toDate().isBefore(DateTime.now());
+      final overdue =
+          nextDue != null && nextDue.toDate().isBefore(DateTime.now());
       final active = data['isDeadManSwitchActive'] != false;
-      final status = !active ? 'paused' : overdue ? 'overdue' : 'safe';
+      final status = !active
+          ? 'paused'
+          : overdue
+          ? 'overdue'
+          : 'safe';
 
       return TrustedPerson(
         ownerUid: document.id,
@@ -94,7 +100,8 @@ class TrustedContactDashboardService {
     final trustedEmails = <String>{};
     for (final contact in contacts.docs) {
       final data = contact.data();
-      if (data['emailVerified'] == true && data['consentStatus'] == 'accepted') {
+      if (data['emailVerified'] == true &&
+          data['consentStatus'] == 'accepted') {
         final email = data['email']?.toString().trim().toLowerCase();
         if (email != null && email.isNotEmpty) trustedEmails.add(email);
       }

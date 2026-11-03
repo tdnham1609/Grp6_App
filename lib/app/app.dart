@@ -128,7 +128,9 @@ class _MainNavigationState extends State<MainNavigation> {
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Xác nhận an toàn'),
-          content: const Text('Bạn có chắc muốn xác nhận bạn vẫn an toàn ngay bây giờ?'),
+          content: const Text(
+            'Bạn có chắc muốn xác nhận bạn vẫn an toàn ngay bây giờ?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -212,7 +214,12 @@ class _MainNavigationState extends State<MainNavigation> {
       body: Stack(
         children: [
           IndexedStack(index: selectedIndex, children: pages),
-          const Positioned(top: 0, left: 0, right: 0, child: OfflineSyncBanner()),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: OfflineSyncBanner(),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(

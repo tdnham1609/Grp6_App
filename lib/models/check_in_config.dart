@@ -141,10 +141,8 @@ class CheckInConfig {
       reminderMinutesBefore:
           (data['reminderMinutesBefore'] as num?)?.toInt() ?? 120,
       isReminderEnabled: data['isReminderEnabled'] as bool? ?? true,
-      isDeadManSwitchActive:
-          data['isDeadManSwitchActive'] as bool? ?? true,
-      gracePeriodMinutes:
-          (data['gracePeriodMinutes'] as num?)?.toInt() ?? 180,
+      isDeadManSwitchActive: data['isDeadManSwitchActive'] as bool? ?? true,
+      gracePeriodMinutes: (data['gracePeriodMinutes'] as num?)?.toInt() ?? 180,
       lastCheckInAt: _parseDateTime(
         data['lastCheckInAt'] ?? data['last_checkin_at'],
       ),
@@ -178,8 +176,7 @@ class CheckInConfig {
       intervalHours: row['interval_hours'] as int? ?? 24,
       reminderMinutesBefore: row['reminder_minutes'] as int? ?? 120,
       isReminderEnabled: (row['is_reminder_enabled'] as int? ?? 1) == 1,
-      isDeadManSwitchActive:
-          (row['is_deadman_active'] as int? ?? 1) == 1,
+      isDeadManSwitchActive: (row['is_deadman_active'] as int? ?? 1) == 1,
       gracePeriodMinutes: row['grace_period_minutes'] as int? ?? 180,
       lastCheckInAt: row['last_checkin_at'] != null
           ? DateTime.tryParse(row['last_checkin_at'] as String)
