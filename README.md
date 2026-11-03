@@ -1,111 +1,154 @@
 # Sinh Tử
 
-**Sinh Tử** là ứng dụng Flutter hỗ trợ xác nhận an toàn định kỳ và cảnh báo người thân khẩn cấp khi người dùng không còn phản hồi đúng hạn. Ứng dụng kết hợp Flutter, Firebase Authentication, Cloud Firestore và Cloud Functions để tạo một luồng Dead Man's Switch đơn giản, trực quan và có thể mở rộng.
+**Sinh Tử** là ứng dụng Flutter Android giúp người dùng xác nhận trạng thái an toàn theo chu kỳ và cảnh báo người thân nếu không phản hồi đúng hạn.
+
+Ứng dụng phù hợp cho người sống một mình, làm việc xa nhà, di chuyển một mình hoặc tham gia hoạt động có rủi ro. Người dùng có thể check-in nhanh từ app, notification hoặc Android Home Screen Widget; hệ thống tính deadline tiếp theo và thông báo người liên hệ khẩn cấp nếu quá hạn.
 
 ## Vấn đề ứng dụng giải quyết
 
-- Người sống một mình có thể quên hoặc không có cơ hội mở app để xác nhận mình đang an toàn.
-- Người thân khó biết tình trạng người cần theo dõi khi liên hệ thông thường không phản hồi.
-- Việc theo dõi thủ công qua tin nhắn, cuộc gọi hoặc đồng hồ định kỳ thiếu tính nhất quán.
-- Người dùng mất mạng vẫn cần lưu lại check-in để đồng bộ sau.
-- Việc bấm mở app hoặc đợi cảnh báo có thể làm quá muộn thời điểm cần hỗ trợ.
+- Người sống một mình có thể quên hoặc không mở app để xác nhận đang an toàn.
+- Người thân khó biết tình trạng người được theo dõi khi cuộc gọi hoặc tin nhắn không được phản hồi.
+- Việc theo dõi thủ công không có mốc thời gian nhất quán.
+- Người dùng cần check-in ngay cả khi mất mạng và có cơ chế đồng bộ sau.
+- Android có thể không gửi nhắc nhở nếu chưa cấp notification/exact alarm permission.
+- Người thân cần trạng thái tóm tắt mà không truy cập dữ liệu cá nhân hoặc lịch sử đầy đủ.
 
-Sinh Tử giúp chuyển quy trình này thành một chu kỳ định kỳ rõ ràng: người dùng check-in, hệ thống tính hạn tiếp theo, nhắc nhở trước hạn và kích hoạt cảnh báo nếu người dùng không xác nhận.
+Sinh Tử biến quy trình thành chuỗi:
 
-## Tính năng chính
+```text
+check-in -> tính deadline -> nhắc nhở -> thời gian gia hạn -> cảnh báo người liên hệ
+```
+
+## Tính năng
 
 ### An toàn và check-in
 
-- Đặt chu kỳ check-in theo giờ, thời gian nhắc nhở và trạng thái bật/tắt Switch.
-- Ghi nhận lần xác nhận an toàn theo thời gian máy chủ.
-- Theo dõi trạng thái **An toàn**, **Sắp đến hạn**, **Quá hạn** và **Không có dữ liệu**.
-- Xem lịch sử check-in theo cục bộ và Firebase.
+- Thiết lập chu kỳ check-in theo giờ.
+- Trạng thái **An toàn**, **Sắp đến hạn**, **Quá hạn** và **Chưa có dữ liệu**.
+- Tính deadline tiếp theo sau mỗi lần xác nhận.
+- Lưu lịch sử check-in cục bộ và đồng bộ Firestore.
+- Sử dụng event theo từng deadline để chống cảnh báo trùng lặp.
 
 ### Check-in nhanh
 
-- Android home screen widget để xác nhận từ màn hình chính.
-- Nút **Tôi vẫn an toàn** trên thông báo nhắc nhở Android.
-- Có dialog xác nhận trước khi ghi nhận trên app để giảm thao tác nhầm.
-- Thông báo có thể hiển thị trên màn hình khóa tùy cấu hình của thiết bị và Android.
+- Android Home Screen Widget.
+- Nút **Tôi vẫn an toàn** trên notification.
+- Hiển thị xác nhận trên màn hình khóa tùy Android và cài đặt thiết bị.
+- Dialog xác nhận trước khi ghi nhận để giảm thao tác nhầm.
 
-### Hoạt động offline
+### Offline-first
 
-- Lưu check-in và cấu hình vào SQLite.
-- Hiển thị banner trạng thái mạng và số bản ghi đang chờ đồng bộ.
-- Tự động đồng bộ các bản ghi pending khi mạng trở lại.
-- Cho phép người dùng đồng bộ thủ công trong màn hình lịch sử.
+- Lưu check-in và cấu hình bằng SQLite.
+- Hiển thị banner mất mạng và số bản ghi chờ đồng bộ.
+- Tự động đồng bộ khi mạng trở lại.
+- Đồng bộ thủ công trong màn hình lịch sử.
 
-### Thông báo và sức khỏe thiết bị
+### Quyền chạy nền
 
-- Kiểm tra quyền thông báo Android.
+- Kiểm tra quyền notification Android.
 - Kiểm tra quyền báo đúng giờ/exact alarm.
-- Gợi ý người dùng cấp quyền cần thiết để nhắc nhở chạy đúng hạn.
+- Hướng dẫn người dùng cấp quyền cần thiết trong Settings.
 
-### Danh bạ khẩn cấp và xác minh
+### Danh bạ khẩn cấp
 
-- Thêm, sửa, tắt và xóa liên hệ khẩn cấp.
-- Gửi liên kết xác minh email và consent opt-in.
+- Thêm, sửa, tạm tắt hoặc xóa danh bạ.
+- Gửi link xác minh email và consent opt-in.
 - Chỉ liên hệ đã xác minh email và chấp thuận mới nhận cảnh báo.
-- Che một phần địa chỉ email trong luồng xác minh.
+- Không cho phép người liên hệ tự xác minh hoặc đồng ý consent qua client.
 
 ### Dashboard người thân
 
 - Người thân xem trạng thái tóm tắt của người được theo dõi.
-- Dùng Firestore client-side, không bắt buộc deploy callable Function mới.
-- Chủ tài khoản tự đồng bộ danh sách người thân đã xác minh và consent.
-- Dashboard chỉ hiển thị trạng thái tóm tắt, lần check-in cuối và hạn tiếp theo.
+- Dùng Firestore trực tiếp nên không cần callable dashboard Function.
+- Chủ tài khoản đồng bộ danh sách email đã xác minh/chấp thuận vào `trustedStatuses`.
+- Hiển thị tên, quan hệ, lần check-in cuối, deadline và trạng thái an toàn/quá hạn/tạm dừng.
 
-## Kiến trúc dữ liệu
+## Kiến trúc
 
-- Flutter App: giao diện, SQLite offline và Firebase client.
-- Firebase Authentication: đăng ký, đăng nhập và danh tính người dùng.
-- Cloud Firestore: hồ sơ, cấu hình, lịch sử, danh bạ và trạng thái dashboard.
-- Cloud Functions: xác minh liên hệ, email và cảnh báo quá hạn khi môi trường server được cấu hình.
-- Android AppWidget: check-in và trạng thái nhanh từ launcher.
+```text
+Flutter App
+  ├── Firebase Authentication
+  ├── Cloud Firestore
+  ├── SQLite offline-first
+  ├── Android AppWidget
+  ├── Local notification và notification action
+  └── Cloud Functions
+        ├── xác minh liên hệ
+        ├── consent opt-in
+        ├── kiểm tra quá hạn
+        └── gửi email cảnh báo
+```
 
-## Công nghệ sử dụng
+### Công nghệ sử dụng
 
 - Flutter / Dart
 - Firebase Authentication
 - Cloud Firestore
-- Firebase Cloud Functions
+- Firebase Cloud Functions và TypeScript
 - SQLite qua `sqflite`
-- Android AppWidget / `home_widget`
-- Local Notifications
+- Android AppWidget qua `home_widget`
+- Local notification qua `flutter_local_notifications`
 - Firebase Emulator Suite
-- Node.js / TypeScript cho Functions
 
-## Cấu hình Firebase Production
+## Demo Android bằng Firebase Production
 
-Ứng dụng mặc định **không dùng Firebase Emulator** khi chạy bình thường. Để kết nối emulator trong quá trình phát triển Android:
+Release không kết nối emulator mặc định. Chạy app production Firebase bằng:
+
+```powershell
+flutter run
+```
+
+Chạy với emulator Android:
 
 ```powershell
 flutter run --dart-define=USE_FIREBASE_EMULATORS=true
 ```
 
-Bản Release kết nối trực tiếp Firebase production và yêu cầu giữ các file sau:
+Android Emulator kết nối máy chủ qua `10.0.2.2`. Các cấu hình phải tồn tại trong:
 
 - `android/app/google-services.json`
 - `lib/firebase_options.dart`
 - `.firebaserc`
 
-## Chạy emulator cho demo
+Không commit credentials, SMTP password, Firebase Admin private key hoặc secret.
 
-Chuẩn bị email SMTP:
+## Chạy demo local bằng Firebase Emulator
+
+### Chuẩn bị SMTP
 
 ```powershell
 Copy-Item functions/.env.local.example functions/.env.local
 Copy-Item functions/.secret.local.example functions/.secret.local
 ```
 
-Điền Gmail App Password vào `functions/.secret.local`, không commit file chứa credential. Sau đó chạy:
+Điền Google App Password trong `functions/.secret.local`. Không dùng mật khẩu đăng nhập Gmail trực tiếp.
+
+Ví dụ:
+
+```text
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=dia-chi-gmail@gmail.com
+SMTP_FROM=dia-chi-gmail@gmail.com
+SMTP_PASS=google-app-password
+SEND_DEMO_ALERTS=true
+SEND_REAL_ALERTS=true
+```
+
+### Khởi chạy emulator
 
 ```powershell
 npm.cmd --prefix functions run build
 firebase.cmd emulators:start --only auth,firestore,functions,pubsub --project sinhtuapp --export-on-exit=.firebase-demo-data
 ```
 
-Emulator UI mặc định tại `http://localhost:4000`. Android Emulator kết nối máy host qua `10.0.2.2`. Có thể import dữ liệu lần sau bằng:
+Emulator UI:
+
+```text
+http://localhost:4000
+```
+
+Lần chạy sau có thể import dữ liệu demo:
 
 ```powershell
 firebase.cmd emulators:start --only auth,firestore,functions,pubsub --project sinhtuapp --import=.firebase-demo-data
@@ -113,37 +156,57 @@ firebase.cmd emulators:start --only auth,firestore,functions,pubsub --project si
 
 ## Kịch bản demo
 
-1. Chạy app với emulator hoặc production Firebase.
-2. Đăng ký tài khoản Email/Password.
-3. Thêm danh bạ khẩn cấp.
-4. Gửi link xác minh email.
-5. Chấp thuận consent từ liên kết xác minh.
-6. Check-in từ app, notification hoặc Android widget.
-7. Mở **Người thân** để xem dashboard trạng thái tóm tắt.
-8. Tùy chọn chạy cảnh báo demo hoặc đặt lịch quá hạn trong emulator.
+1. Đăng ký tài khoản Email/Password.
+2. Thêm một danh bạ khẩn cấp.
+3. Gửi link xác minh email.
+4. Mở link bằng máy đang chạy emulator.
+5. Chấp thuận consent nhận cảnh báo.
+6. Check-in từ app, notification hoặc Android Widget.
+7. Mở tab **Người thân** để xem dashboard trạng thái.
+8. Bật reminder và kiểm tra health permission trong Cài đặt.
+9. Tùy chọn chạy demo email hoặc đặt deadline quá hạn trong emulator.
 
-## Câu lệnh kiểm tra
+Luồng demo quá hạn có thể đặt gia hạn ngắn để kiểm tra cảnh báo. Cấu hình production giữ chu kỳ quét 15 phút và gia hạn 3 giờ.
+
+## Kiểm tra
 
 ```powershell
-flutter test
 flutter analyze
+flutter test
 flutter build apk --debug
 npm.cmd --prefix functions run build
 npm.cmd --prefix functions test
+firebase deploy --only firestore:rules
 ```
 
-## Lưu ý Spark / Blaze
+## Spark và Blaze
 
-Dashboard người thân hiện đọc trực tiếp Firestore nên có thể chạy trên Firebase Spark (gói miễn phí) trong điều kiện quota demo. Các scheduled Cloud Functions chạy định kỳ và gửi email production vẫn có thể yêu cầu Firebase Blaze tùy cơ chế billing/API của project. Vì vậy nên dùng emulator để demo chức năng này khi chưa có ngân sách cloud.
+Dashboard người thân hiện đọc trực tiếp Firestore, không cần deploy Callable Function riêng và phù hợp cho Firebase Spark trong giới hạn quota demo.
 
-## Bảo mật
+Các scheduled Cloud Functions chạy cron, Secret Manager, API build hoặc email production có thể yêu cầu Firebase Blaze tùy tài nguyên và cấu hình project. Khi chưa có ngân sách cloud, nên dùng Firebase Emulator để demo các luồng server-side.
 
-Không commit:
+## Bảo mật và giới hạn
 
-- SMTP password hoặc token
-- Google App Password
-- Firebase Admin credential
-- File chứa API secrets trong thư mục Functions
-- APK hoặc build output
+- Notification action trên lockscreen có thể làm giảm rủi ro bỏ sót check-in nhưng cũng có thể dẫn đến thao tác nhầm.
+- Android có thể giới hạn notification/background task theo OEM, phiên bản hoặc chế độ tiết kiệm pin.
+- Home Widget có giao diện và hành vi khác nhau tùy launcher.
+- Dashboard người thân chỉ hiển thị trạng thái tóm tắt; không truy cập lịch sử check-in hoặc vị trí.
+- Không được dùng Dead Man's Switch là giải pháp an toàn duy nhất trong tình huống khẩn cấp thực tế.
+- Khi triển khai production, ứng dụng nên có cơ chế kiểm tra vị trí, thông báo đa kênh và quy trình bảo vệ dữ liệu cá nhân.
 
-Tất cả giao thức xác minh consent và cảnh báo cần được xem xét lại trước triển khai production, đặc biệt khi ứng dụng xử lý dữ liệu sức khỏe, vị trí và thông tin liên hệ cá nhân.
+## Cấu trúc thư mục
+
+```text
+lib/
+  app/
+  models/
+  screens/
+  services/
+  widgets/
+functions/
+  src/
+android/
+  app/src/main/
+firestore.rules
+firebase.json
+```
