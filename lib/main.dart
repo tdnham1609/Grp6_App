@@ -8,6 +8,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'firebase_options.dart';
 import 'app/app.dart';
 import 'services/notification_service.dart';
+import 'services/home_widget_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ Future<void> main() async {
     defaultValue: false,
   );
   await NotificationService.instance.initialize();
+  await HomeWidgetService.instance.initialize();
 
   if (useFirebaseEmulators) {
     final host = defaultTargetPlatform == TargetPlatform.android

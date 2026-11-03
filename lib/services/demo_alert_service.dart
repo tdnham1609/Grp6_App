@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class DemoAlertResult {
   final int sentCount;
@@ -21,10 +22,18 @@ class DemoAlertResult {
 }
 
 class DemoAlertService {
-  final FirebaseFunctions _functions;
+  final FirebaseFunctions? _providedFunctions;
 
   DemoAlertService({FirebaseFunctions? functions})
-    : _functions = functions ?? FirebaseFunctions.instance;
+    : _providedFunctions = functions;
+
+  FirebaseFunctions get _functions {
+    if (_providedFunctions != null) return _providedFunctions;
+    if (Firebase.apps.isEmpty) {
+      throw StateError('Firebase chưa được khởi tạo.');
+    }
+    return FirebaseFunctions.instance;
+  }
 
   Future<DemoAlertResult> sendDemoAlert() async {
     final callable = _functions.httpsCallable(

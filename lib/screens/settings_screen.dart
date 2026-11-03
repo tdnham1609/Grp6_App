@@ -46,6 +46,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isSendingDemoAlert = false;
   bool _isPreparingOverdueDemo = false;
   bool _isOverdueDemoScheduled = false;
+  bool _notificationsEnabled = false;
+  bool _exactAlarmEnabled = false;
+  bool _healthLoaded = false;
 
   bool get _showOverdueDemo => kDebugMode && _useFirebaseEmulators;
 
@@ -54,6 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadConfig();
     _loadLocationState();
+    _loadSafetyHealth();
   }
 
   Future<void> _loadConfig() async {
@@ -70,6 +74,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _loadSafetyHealth() async {
+    final notifications = await NotificationService.instance
+        .hasNotificationPermission();
+    final exactAlarm = await NotificationService.instance
+        .hasExactAlarmPermission();
+    if (!mounted) return;
+    setState(() {
+      _notificationsEnabled = notifications;
+      _exactAlarmEnabled = exactAlarm;
+      _healthLoaded = true;
+    });
   }
 
   Future<void> _loadLocationState() async {
@@ -724,6 +741,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {}
   }
 
+  Widget _healthRow(
+    String label,
+    bool enabled,
+    String actionLabel,
+    VoidCallback onPressed,
+  ) {
+    return Row(
+      children: [
+        Icon(
+          enabled ? Icons.check_circle_rounded : Icons.cancel_rounded,
+          size: 20,
+          color: enabled ? const Color(0xFF078D83) : const Color(0xFFB54708),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+        if (!enabled)
+          TextButton(onPressed: onPressed, child: Text(actionLabel)),
+      ],
+    );
+  }
+
   Future<void> _handleSignOut(BuildContext context) async {
     final shouldSignOut = await showDialog<bool>(
       context: context,
@@ -779,6 +817,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
               children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: (_notificationsEnabled && _exactAlarmEnabled)
+                          ? const Color(0xFFB7DDD8)
+                          : const Color(0xFFF2C6A0),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            (_notificationsEnabled && _exactAlarmEnabled)
+                                ? Icons.health_and_safety_rounded
+                                : Icons.warning_amber_rounded,
+                            color: (_notificationsEnabled && _exactAlarmEnabled)
+                                ? teal
+                                : const Color(0xFFB54708),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Sức khỏe thông báo & chạy nền',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF082F49),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _healthRow(
+                        'Thông báo nhắc nhở',
+                        _notificationsEnabled,
+                        'Mở quyền thông báo',
+                        () async {
+                          await NotificationService.instance.requestPermission();
+                          await _loadSafetyHealth();
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _healthRow(
+                        'Báo đúng giờ khi chạy nền',
+                        _exactAlarmEnabled,
+                        'Cho phép báo thức chính xác',
+                        () async {
+                          await NotificationService.instance
+                              .requestExactAlarmPermission();
+                          await _loadSafetyHealth();
+                        },
+                      ),
+                      if (!_healthLoaded)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 10),
+                          child: LinearProgressIndicator(),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // 1. Thẻ thông tin tài khoản
                 InkWell(
                   onTap: () => Navigator.push(

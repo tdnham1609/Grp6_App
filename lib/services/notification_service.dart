@@ -11,10 +11,12 @@ import '../firebase_options.dart';
 import 'check_in_service.dart';
 
 const String quickCheckInActionId = 'quick_check_in';
+final ValueNotifier<bool> quickCheckInConfirmationRequested =
+    ValueNotifier<bool>(false);
 
 void _onNotificationActionForeground(NotificationResponse response) {
   if (response.actionId != quickCheckInActionId) return;
-  CheckInService.instance.recordCheckIn();
+  quickCheckInConfirmationRequested.value = true;
 }
 
 @pragma('vm:entry-point')
@@ -92,6 +94,48 @@ class NotificationService {
   }
 
   /// Yêu cầu người dùng cấp quyền thông báo
+  Future<bool> hasNotificationPermission() async {
+    try {
+      if (kIsWeb) return false;
+      if (Platform.isAndroid) {
+        final androidImpl = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        return await androidImpl?.areNotificationsEnabled() ?? false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> hasExactAlarmPermission() async {
+    try {
+      if (!Platform.isAndroid) return true;
+      final androidImpl = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      return await androidImpl?.canScheduleExactNotifications() ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> requestExactAlarmPermission() async {
+    try {
+      if (!Platform.isAndroid) return true;
+      final androidImpl = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      return await androidImpl?.requestExactAlarmsPermission() ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> requestPermission() async {
     try {
       if (kIsWeb) return false;
@@ -167,7 +211,7 @@ class NotificationService {
           AndroidNotificationAction(
             quickCheckInActionId,
             'Tôi vẫn an toàn',
-            showsUserInterface: false,
+            showsUserInterface: true,
             cancelNotification: true,
           ),
         ],

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/emergency_contact.dart';
 import 'database_service.dart';
+import 'trusted_contact_dashboard_service.dart';
 
 /// Kết quả yêu cầu tạo mã xác minh email và link opt-in
 class VerificationResult {
@@ -112,6 +113,10 @@ class EmergencyContactService {
           .map((doc) => EmergencyContact.fromFirestore(doc))
           .toList();
 
+      try {
+        await TrustedContactDashboardService.instance.syncMyStatus();
+      } catch (_) {}
+
       if (remoteList.isNotEmpty) {
         // Cập nhật lại SQLite để đồng bộ cho các lần mở app offline tiếp theo
         await _dbService.upsertEmergencyContacts(remoteList);
@@ -184,6 +189,7 @@ class EmergencyContactService {
             .doc(contact.id)
             .set(contact.toFirestoreMap())
             .timeout(const Duration(seconds: 7));
+        await TrustedContactDashboardService.instance.syncMyStatus();
       } catch (e) {
         debugPrint('Chưa thể đồng bộ liên hệ lên Firestore: $e');
       }
@@ -229,6 +235,7 @@ class EmergencyContactService {
             .doc(refreshed.id)
             .set(refreshed.toFirestoreMap())
             .timeout(const Duration(seconds: 7));
+        await TrustedContactDashboardService.instance.syncMyStatus();
       } catch (e) {
         debugPrint('Chưa thể cập nhật liên hệ lên Firestore: $e');
       }
@@ -260,6 +267,7 @@ class EmergencyContactService {
             .doc(contactId)
             .delete()
             .timeout(const Duration(seconds: 7));
+        await TrustedContactDashboardService.instance.syncMyStatus();
       } catch (e) {
         debugPrint('Chưa thể xóa liên hệ trên Firestore: $e');
       }

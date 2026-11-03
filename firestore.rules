@@ -176,6 +176,35 @@ service cloud.firestore {
       }
     }
 
+    // ─── Collection: trustedStatuses/{uid} ─────────────────────────────────────
+    // Chủ tài khoản gửi trạng thái tóm tắt; người thân chỉ đọc khi email xuất hiện trong danh sách consent đã xác minh.
+    match /trustedStatuses/{uid} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function isTrusted() {
+        return request.auth != null
+          && request.auth.token.email is string
+          && resource.data.trustedEmails is list
+          && resource.data.trustedEmails.hasAny([request.auth.token.email.lower()]);
+      }
+
+      function isValidStatus() {
+        let data = request.resource.data;
+        return data.ownerUid == uid
+          && data.ownerName is string
+          && data.relationshipsUpdatedAt is timestamp
+          && data.trustedEmails is list
+          && data.isDeadManSwitchActive is bool
+          && data.updatedAt is timestamp;
+      }
+
+      allow read: if isOwner() || isTrusted();
+      allow create, update: if isOwner() && isValidStatus();
+      allow delete: if false;
+    }
+
     // ─── Collection: verification_tokens/{tokenHash} ─────────────────────────────
     // Lưu trữ token xác minh email và consent hash (SHA-256).
     // CHỈ CÓ CLOUD FUNCTIONS (Firebase Admin SDK) mới có quyền truy cập.

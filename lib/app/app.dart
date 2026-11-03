@@ -12,6 +12,10 @@ import '../screens/login_screen.dart';
 import '../services/check_in_service.dart';
 import '../services/check_in_config_service.dart';
 import '../models/check_in_config.dart';
+import '../services/home_widget_service.dart';
+import '../services/notification_service.dart';
+import '../widgets/offline_sync_banner.dart';
+import '../screens/trusted_contact_dashboard_screen.dart';
 
 class SinhTuApp extends StatelessWidget {
   const SinhTuApp({super.key});
@@ -90,7 +94,13 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    quickCheckInConfirmationRequested.addListener(
+      _handleQuickCheckInConfirmation,
+    );
     _initCheckInData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleQuickCheckInConfirmation();
+    });
     // Khởi tạo timer cập nhật đếm ngược mỗi 30 giây để đồng hồ luôn chính xác
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) {
@@ -101,8 +111,38 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    quickCheckInConfirmationRequested.removeListener(
+      _handleQuickCheckInConfirmation,
+    );
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  void _handleQuickCheckInConfirmation() {
+    if (!quickCheckInConfirmationRequested.value || !mounted) return;
+    quickCheckInConfirmationRequested.value = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Xác nhận an toàn'),
+          content: const Text('Bạn có chắc muốn xác nhận bạn vẫn an toàn ngay bây giờ?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Chưa chắc'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Tôi vẫn an toàn'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) await checkIn();
+    });
   }
 
   Future<void> _initCheckInData() async {
@@ -133,6 +173,11 @@ class _MainNavigationState extends State<MainNavigation> {
         lastCheckIn = result.checkIn.checkedInAt;
         _config = updatedConfig;
       });
+      await HomeWidgetService.instance.saveAndUpdate(
+        result.checkIn.checkedInAt,
+        updatedConfig,
+      );
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -159,11 +204,17 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       const HistoryScreen(),
       const ContactsScreen(),
+      const TrustedContactDashboardScreen(),
       const SettingsScreen(),
     ];
 
     return Scaffold(
-      body: IndexedStack(index: selectedIndex, children: pages),
+      body: Stack(
+        children: [
+          IndexedStack(index: selectedIndex, children: pages),
+          const Positioned(top: 0, left: 0, right: 0, child: OfflineSyncBanner()),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
@@ -182,6 +233,11 @@ class _MainNavigationState extends State<MainNavigation> {
           NavigationDestination(
             icon: Icon(Icons.contacts_outlined),
             label: 'Danh bạ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.group_outlined),
+            selectedIcon: Icon(Icons.group_rounded),
+            label: 'Người thân',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../models/check_in_config.dart';
 import 'database_service.dart';
 import 'notification_service.dart';
+import 'trusted_contact_dashboard_service.dart';
 
 /// Service quản lý cấu hình chu kỳ check-in, tính toán thời hạn tiếp theo
 /// và điều phối thông báo nhắc nhở an toàn
@@ -137,6 +138,7 @@ class CheckInConfigService {
           .doc('checkin')
           .set(initialConfig.toFirestoreMap(), SetOptions(merge: true))
           .timeout(const Duration(seconds: 7));
+      await TrustedContactDashboardService.instance.syncMyStatus(initialConfig);
     } catch (_) {}
 
     return initialConfig;
@@ -195,6 +197,7 @@ class CheckInConfigService {
             .doc('checkin')
             .set(updated.toFirestoreMap(), SetOptions(merge: true))
             .timeout(const Duration(seconds: 7));
+        await TrustedContactDashboardService.instance.syncMyStatus(updated);
       } catch (e) {
         debugPrint('Chưa thể đồng bộ cấu hình lên Firestore: $e');
       }
@@ -248,6 +251,7 @@ class CheckInConfigService {
             .doc('checkin')
             .set(updated.toFirestoreMap(), SetOptions(merge: true))
             .timeout(const Duration(seconds: 7));
+        await TrustedContactDashboardService.instance.syncMyStatus(updated);
       } catch (e) {
         debugPrint('Chưa thể đồng bộ hạn check-in lên Firestore: $e');
       }
