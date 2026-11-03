@@ -1,9 +1,39 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../firebase_options.dart';
+import 'check_in_service.dart';
+
+const String quickCheckInActionId = 'quick_check_in';
+
+void _onNotificationActionForeground(NotificationResponse response) {
+  if (response.actionId != quickCheckInActionId) return;
+  CheckInService.instance.recordCheckIn();
+}
+
+@pragma('vm:entry-point')
+Future<void> _onNotificationActionBackground(
+  NotificationResponse response,
+) async {
+  if (response.actionId != quickCheckInActionId) return;
+
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {
+    if (Firebase.apps.isEmpty) rethrow;
+  }
+
+  await CheckInService.instance.recordCheckIn();
+}
 
 /// Service quản lý thông báo cục bộ (Local Notifications)
 /// Nhắc nhở người dùng trước khi đến thời hạn điểm danh an toàn
@@ -48,9 +78,9 @@ class NotificationService {
 
       await _notificationsPlugin.initialize(
         settings: initSettings,
-        onDidReceiveNotificationResponse: (response) {
-          debugPrint('Đã bấm vào thông báo: ${response.payload}');
-        },
+        onDidReceiveNotificationResponse: _onNotificationActionForeground,
+        onDidReceiveBackgroundNotificationResponse:
+            _onNotificationActionBackground,
       );
 
       _isInitialized = true;
@@ -131,6 +161,16 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        visibility: NotificationVisibility.public,
+        category: AndroidNotificationCategory.reminder,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            quickCheckInActionId,
+            'Tôi vẫn an toàn',
+            showsUserInterface: false,
+            cancelNotification: true,
+          ),
+        ],
       );
 
       const darwinDetails = DarwinNotificationDetails(
