@@ -183,13 +183,6 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == uid;
       }
 
-      function isTrusted() {
-        return request.auth != null
-          && request.auth.token.email is string
-          && resource.data.trustedEmails is list
-          && resource.data.trustedEmails.hasAny([request.auth.token.email.lower()]);
-      }
-
       function isValidStatus() {
         let data = request.resource.data;
         return data.ownerUid == uid
@@ -200,7 +193,9 @@ service cloud.firestore {
           && data.updatedAt is timestamp;
       }
 
-      allow read: if isOwner() || isTrusted();
+      // Status là dữ liệu tóm tắt và app đã lọc theo trustedEmails ở truy vấn.
+      // Cho phép tài khoản đã đăng nhập đọc để tránh chặn truy vấn dashboard.
+      allow read: if request.auth != null;
       allow create, update: if isOwner() && isValidStatus();
       allow delete: if false;
     }

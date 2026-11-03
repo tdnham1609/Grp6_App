@@ -43,7 +43,11 @@ class HomeWidgetService {
   Future<void> initialize() async {
     if (!kIsWeb && Platform.isAndroid) {
       HomeWidget.registerInteractivityCallback(homeWidgetBackgroundCallback);
-      await updateStatusFromConfig();
+      try {
+        await updateStatusFromConfig();
+      } catch (error) {
+        debugPrint('Home widget startup update failed: $error');
+      }
     }
   }
 
