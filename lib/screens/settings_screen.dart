@@ -1214,18 +1214,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: teal,
                           ),
                           title: const Text('Về ứng dụng Sinh Tử'),
-                          subtitle: const Text(
-                            'Phiên bản 1.0.0 (Dead Man\'s Switch)',
-                          ),
+                          subtitle: const Text('Phiên bản 1.1.1'),
                           onTap: () {
                             showAboutDialog(
                               context: context,
                               applicationName: 'Sinh Tử',
-                              applicationVersion: '1.0.0',
-                              applicationIcon: const Icon(
-                                Icons.shield_moon_rounded,
-                                size: 48,
-                                color: teal,
+                              applicationVersion: '1.1.1',
+                              applicationIcon: Image.asset(
+                                'assets/images/logo.jpg',
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.contain,
                               ),
                               children: const [
                                 Text(

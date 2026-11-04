@@ -17,10 +17,11 @@ class AppHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(
-          Icons.shield_moon_rounded,
-          color: Color(0xFF50E3C2),
-          size: 38,
+        Image.asset(
+          'assets/images/logo.jpg',
+          width: 38,
+          height: 38,
+          fit: BoxFit.contain,
         ),
         const SizedBox(width: 12),
         Expanded(
