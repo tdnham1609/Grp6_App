@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyContactPortal = exports.requestContactVerification = exports.sendDemoAlert = exports.runOverdueDemoCheck = exports.checkOverdueDeadManSwitch = void 0;
+exports.syncTrustedStatus = exports.verifyContactPortal = exports.requestContactVerification = exports.sendDemoAlert = exports.runOverdueDemoCheck = exports.checkOverdueDeadManSwitch = void 0;
 const app_1 = require("firebase-admin/app");
 // Khởi tạo Firebase Admin SDK trên máy chủ Cloud Functions
 (0, app_1.initializeApp)();
@@ -16,4 +16,6 @@ Object.defineProperty(exports, "sendDemoAlert", { enumerable: true, get: functio
 var contactVerification_1 = require("./contactVerification");
 Object.defineProperty(exports, "requestContactVerification", { enumerable: true, get: function () { return contactVerification_1.requestContactVerification; } });
 Object.defineProperty(exports, "verifyContactPortal", { enumerable: true, get: function () { return contactVerification_1.verifyContactPortal; } });
+var trustedStatusSync_1 = require("./trustedStatusSync");
+Object.defineProperty(exports, "syncTrustedStatus", { enumerable: true, get: function () { return trustedStatusSync_1.syncTrustedStatus; } });
 //# sourceMappingURL=index.js.map

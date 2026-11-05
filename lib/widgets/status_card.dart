@@ -83,29 +83,37 @@ class StatusCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: badgeBgColor,
-                      borderRadius: BorderRadius.circular(12),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: badgeBgColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(statusIcon, color: statusColor, size: 20),
                     ),
-                    child: Icon(statusIcon, color: statusColor, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    statusLabel,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        statusLabel,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
+                constraints: const BoxConstraints(maxWidth: 105),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 5,

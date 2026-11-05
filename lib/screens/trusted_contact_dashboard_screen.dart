@@ -17,6 +17,7 @@ class _TrustedContactDashboardScreenState
   bool _isLoading = true;
   String? _error;
   List<TrustedPerson> _people = [];
+  List<Map<String, dynamic>> _invitations = [];
 
   @override
   void initState() {
@@ -40,9 +41,12 @@ class _TrustedContactDashboardScreenState
     });
     try {
       final people = await TrustedContactDashboardService.instance.getPeople();
+      final invitations =
+          await TrustedContactDashboardService.instance.getInvitations();
       if (!mounted) return;
       setState(() {
         _people = people;
+        _invitations = invitations;
         _isLoading = false;
       });
     } catch (error) {
@@ -100,7 +104,7 @@ class _TrustedContactDashboardScreenState
         ],
       );
     }
-    if (_people.isEmpty) {
+    if (_people.isEmpty && _invitations.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
@@ -127,10 +131,95 @@ class _TrustedContactDashboardScreenState
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      itemCount: _people.length,
+      itemCount: (_invitations.isEmpty ? 0 : 1) + _people.length,
       separatorBuilder: (_, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _personCard(_people[index]),
+      itemBuilder: (context, index) {
+        if (_invitations.isNotEmpty && index == 0) {
+          return _invitationCard();
+        }
+        final personIndex = index - (_invitations.isEmpty ? 0 : 1);
+        return _personCard(_people[personIndex]);
+      },
     );
+  }
+
+  Widget _invitationCard() {
+    final pending = _invitations.where((item) =>
+        item['consentStatus'] != 'accepted').toList();
+    if (pending.isEmpty) return const SizedBox.shrink();
+    final invitation = pending.first;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF59E0B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Lời mời người liên hệ',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text('${invitation['ownerName']} đã thêm email của bạn để nhận cảnh báo khẩn cấp.'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _sendVerification,
+                  child: const Text('Gửi xác minh Gmail'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _acceptInvitation(invitation),
+                  child: const Text('Đồng ý'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendVerification() async {
+    try {
+      await TrustedContactDashboardService.instance.sendEmailVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi email xác minh Firebase Auth.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _acceptInvitation(Map<String, dynamic> invitation) async {
+    try {
+      await TrustedContactDashboardService.instance.acceptInvitation(
+        invitation['ownerUid'].toString(),
+        invitation['contactId'].toString(),
+      );
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xác nhận làm người liên hệ khẩn cấp.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   Widget _personCard(TrustedPerson person) {

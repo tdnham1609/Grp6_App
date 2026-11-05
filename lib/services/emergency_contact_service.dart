@@ -356,42 +356,12 @@ class EmergencyContactService {
       );
     }
 
-    try {
-      final callable = functions.httpsCallable(
-        'requestContactVerification',
-        options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
-      );
-
-      final response = await callable.call<Map<String, dynamic>>({
-        'contactId': contactId,
-      });
-
-      final data = response.data;
-      return VerificationResult(
-        success: data['success'] == true,
-        message: data['message'] as String? ?? 'Đã tạo link xác minh an toàn.',
-        emailMasked: data['emailMasked'] as String?,
-        verificationUrl: data['verificationUrl'] as String?,
-        isDryRun: data['isDryRun'] == true,
-      );
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint('Lỗi FirebaseFunctions: ${e.code} - ${e.message}');
-      String userMessage = e.message ?? 'Không thể gửi link xác minh.';
-      if (e.code == 'resource-exhausted') {
-        userMessage =
-            e.message ?? 'Vui lòng chờ 2 phút trước khi gửi lại link.';
-      } else if (e.code == 'failed-precondition') {
-        userMessage = 'Người liên hệ này đang bị tắt nhận cảnh báo.';
-      } else if (e.code == 'not-found') {
-        userMessage = 'Không tìm thấy người liên hệ này.';
-      }
-      return VerificationResult(success: false, message: userMessage);
-    } catch (e) {
-      debugPrint('Lỗi kết nối requestContactVerification: $e');
-      return VerificationResult(
-        success: false,
-        message: 'Lỗi kết nối máy chủ: $e',
-      );
-    }
+    await TrustedContactDashboardService.instance.syncMyStatus();
+    return const VerificationResult(
+      success: true,
+      message:
+          'Đã tạo lời mời demo. Người nhận hãy đăng nhập bằng Gmail này, xác minh Firebase Auth rồi chọn Đồng ý trong mục Người thân.',
+      isDryRun: true,
+    );
   }
 }

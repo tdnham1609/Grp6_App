@@ -15,3 +15,5 @@ export {
   requestContactVerification,
   verifyContactPortal,
 } from "./contactVerification";
+
+export { syncTrustedStatus } from "./trustedStatusSync";

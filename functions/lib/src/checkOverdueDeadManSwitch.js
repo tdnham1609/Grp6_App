@@ -53,16 +53,17 @@ async function processSingleUserCheckIn(params) {
     const uid = userRef.id;
     const settings = settingsDoc.data();
     if (settings.isDeadManSwitchActive === false || !settings.nextCheckInDueAt) {
-        return { action: 'NO_ACTION' };
+        return { action: "NO_ACTION" };
     }
-    const alertEventsRef = userRef.collection('alert_events');
+    const alertEventsRef = userRef.collection("alert_events");
     // Tìm sự kiện cảnh báo gần nhất
     const recentAlertsSnapshot = await alertEventsRef
-        .orderBy('detectedAt', 'desc')
+        .orderBy("detectedAt", "desc")
         .limit(1)
         .get();
     const recentAlert = recentAlertsSnapshot.docs[0]?.data();
-    const existingAlert = recentAlert?.checkInDueAt.toMillis() === settings.nextCheckInDueAt.toMillis()
+    const existingAlert = recentAlert?.checkInDueAt.toMillis() ===
+        settings.nextCheckInDueAt.toMillis()
         ? recentAlert
         : null;
     const dueDate = settings.nextCheckInDueAt.toDate();
@@ -73,25 +74,25 @@ async function processSingleUserCheckIn(params) {
     let eligibleContacts = [];
     try {
         const contactsSnap = await userRef
-            .collection('emergency_contacts')
-            .where('isActive', '==', true)
+            .collection("emergency_contacts")
+            .where("isActive", "==", true)
             .get();
         eligibleContacts = contactsSnap.docs
             .map((d) => d.data())
-            .filter((c) => c.emailVerified === true && c.consentStatus === 'accepted');
+            .filter((c) => c.emailVerified === true && c.consentStatus === "accepted");
     }
     catch (contactErr) {
         logger.warn(`[DeadManSwitch] Lỗi truy vấn danh bạ khẩn cấp cho ${uid}:`, contactErr);
     }
     let claimForSending = false;
-    let evaluatedAction = 'NO_ACTION';
+    let evaluatedAction = "NO_ACTION";
     let targetGraceEndsAt = new Date(dueDate.getTime() + safetyEngine_1.DEFAULT_GRACE_PERIOD_MINUTES * 60 * 1000);
     let freshSettingsSnapshot = settings;
     // 2. Chạy Firestore Transaction để đọc dữ liệu mới nhất và claim event (Chống Race Condition & Trùng lặp)
     await db.runTransaction(async (transaction) => {
         const freshSettingsSnap = await transaction.get(settingsDoc.ref);
         if (!freshSettingsSnap.exists) {
-            evaluatedAction = 'NO_ACTION';
+            evaluatedAction = "NO_ACTION";
             return;
         }
         const freshSettings = freshSettingsSnap.data();
@@ -100,8 +101,9 @@ async function processSingleUserCheckIn(params) {
             const freshDueDate = freshSettings.nextCheckInDueAt.toDate();
             targetEventRef = alertEventsRef.doc(`event_${freshDueDate.getTime()}`);
         }
-        if (freshSettings.isDeadManSwitchActive === false || !freshSettings.nextCheckInDueAt) {
-            evaluatedAction = 'NO_ACTION';
+        if (freshSettings.isDeadManSwitchActive === false ||
+            !freshSettings.nextCheckInDueAt) {
+            evaluatedAction = "NO_ACTION";
             return;
         }
         const targetEventSnap = await transaction.get(targetEventRef);
@@ -122,13 +124,13 @@ async function processSingleUserCheckIn(params) {
                     ? freshAlert.gracePeriodEndsAt.toDate()
                     : new Date(currentDueDate.getTime() + safetyEngine_1.DEFAULT_GRACE_PERIOD_MINUTES * 60 * 1000));
         switch (evaluation.action) {
-            case 'START_GRACE_PERIOD': {
+            case "START_GRACE_PERIOD": {
                 const newEvent = {
                     id: eventId,
                     uid,
                     checkInDueAt: freshSettings.nextCheckInDueAt,
                     gracePeriodEndsAt: firestore_1.Timestamp.fromDate(targetGraceEndsAt),
-                    status: 'overdue',
+                    status: "overdue",
                     detectedAt: nowTimestamp,
                     resolvedAt: null,
                     cancellationReason: null,
@@ -137,7 +139,7 @@ async function processSingleUserCheckIn(params) {
                 transaction.set(targetEventRef, newEvent, { merge: true });
                 break;
             }
-            case 'TRIGGER_DRY_RUN': {
+            case "TRIGGER_DRY_RUN": {
                 // Kiểm tra xem backend đã được cấu hình gửi email thật hay đang ở chế độ Dry-Run mặc định
                 const isRealEmailConfigured = emailService.hasValidConfiguration();
                 if (!isRealEmailConfigured) {
@@ -146,7 +148,7 @@ async function processSingleUserCheckIn(params) {
                         contactId: c.id,
                         email: c.email,
                         name: c.name,
-                        status: 'skipped_dry_run',
+                        status: "skipped_dry_run",
                         sentAt: null,
                         error: null,
                         attempts: 0,
@@ -156,7 +158,7 @@ async function processSingleUserCheckIn(params) {
                         uid,
                         checkInDueAt: freshSettings.nextCheckInDueAt,
                         gracePeriodEndsAt: firestore_1.Timestamp.fromDate(targetGraceEndsAt),
-                        status: 'dry_run_dispatched',
+                        status: "dry_run_dispatched",
                         detectedAt: freshAlert ? freshAlert.detectedAt : nowTimestamp,
                         resolvedAt: nowTimestamp,
                         cancellationReason: null,
@@ -178,7 +180,7 @@ async function processSingleUserCheckIn(params) {
                         uid,
                         checkInDueAt: freshSettings.nextCheckInDueAt,
                         gracePeriodEndsAt: firestore_1.Timestamp.fromDate(targetGraceEndsAt),
-                        status: 'pending_alert',
+                        status: "pending_alert",
                         detectedAt: freshAlert ? freshAlert.detectedAt : nowTimestamp,
                         resolvedAt: null,
                         cancellationReason: null,
@@ -188,17 +190,19 @@ async function processSingleUserCheckIn(params) {
                 }
                 break;
             }
-            case 'CANCEL_ALERT': {
-                if (targetEventRef && existingAlert && existingAlert.status !== 'cancelled') {
+            case "CANCEL_ALERT": {
+                if (targetEventRef &&
+                    existingAlert &&
+                    existingAlert.status !== "cancelled") {
                     transaction.update(targetEventRef, {
-                        status: 'cancelled',
+                        status: "cancelled",
                         resolvedAt: nowTimestamp,
                         cancellationReason: evaluation.reason,
                     });
                 }
                 break;
             }
-            case 'NO_ACTION':
+            case "NO_ACTION":
             default:
                 break;
         }
@@ -211,10 +215,11 @@ async function processSingleUserCheckIn(params) {
         const freshEventSnap = await targetEventRef.get();
         const persistedRecipients = freshEventSnap.data()?.recipients;
         // Lấy tên hiển thị của người dùng
-        const userDocSnap = await db.collection('users').doc(uid).get();
-        const userDisplayName = userDocSnap.data()?.displayName || 'Người dùng Sinh Tử';
+        const userDocSnap = await db.collection("users").doc(uid).get();
+        const userDisplayName = userDocSnap.data()?.displayName || "Người dùng Sinh Tử";
         const recipientResults = [];
-        const sharedLocation = freshSettingsSnapshot.isLocationSharingEnabled && freshSettingsSnapshot.lastKnownLocation
+        const sharedLocation = freshSettingsSnapshot.isLocationSharingEnabled &&
+            freshSettingsSnapshot.lastKnownLocation
             ? freshSettingsSnapshot.lastKnownLocation
             : null;
         const locationPayload = sharedLocation
@@ -230,13 +235,13 @@ async function processSingleUserCheckIn(params) {
         // Gửi lần lượt cho từng người nhận (cô lập lỗi, gửi lỗi người này không ảnh hưởng người khác)
         for (const contact of eligibleContacts) {
             // Idempotency per recipient: Đọc trạng thái đã persisted để tránh gửi lại sau crash/retry
-            const alreadySent = persistedRecipients?.find((r) => r.contactId === contact.id && r.status === 'sent');
+            const alreadySent = persistedRecipients?.find((r) => r.contactId === contact.id && r.status === "sent");
             if (alreadySent) {
                 logger.info(`[DeadManSwitch] Bỏ qua ${contact.email} (contactId: ${contact.id}) — đã gửi thành công trước đó (idempotency).`);
                 recipientResults.push(alreadySent);
                 continue;
             }
-            const projectId = process.env.GCLOUD_PROJECT || 'sinhtuapp';
+            const projectId = process.env.GCLOUD_PROJECT || "sinhtuapp";
             const revokeConsentUrl = `https://us-central1-${projectId}.cloudfunctions.net/verifyContactPortal`;
             const delivery = await emailService.sendAlertEmail({
                 recipient: {
@@ -250,7 +255,7 @@ async function processSingleUserCheckIn(params) {
                 location: locationPayload,
                 revokeConsentUrl,
             });
-            if (delivery.status === 'sent') {
+            if (delivery.status === "sent") {
                 delivery.sentAt = nowTimestamp;
             }
             recipientResults.push(delivery);
@@ -268,20 +273,20 @@ async function processSingleUserCheckIn(params) {
             }
         }
         // Đánh giá trạng thái tổng thể dựa trên kết quả từng người nhận
-        const sentCount = recipientResults.filter((r) => r.status === 'sent').length;
-        const failedCount = recipientResults.filter((r) => r.status === 'failed').length;
-        let finalStatus = 'alert_sent';
+        const sentCount = recipientResults.filter((r) => r.status === "sent").length;
+        const failedCount = recipientResults.filter((r) => r.status === "failed").length;
+        let finalStatus = "alert_sent";
         if (eligibleContacts.length === 0) {
-            finalStatus = 'alert_sent'; // Không có người nhận hợp lệ
+            finalStatus = "alert_sent"; // Không có người nhận hợp lệ
         }
         else if (sentCount === eligibleContacts.length) {
-            finalStatus = 'alert_sent';
+            finalStatus = "alert_sent";
         }
         else if (sentCount > 0 && failedCount > 0) {
-            finalStatus = 'partially_sent';
+            finalStatus = "partially_sent";
         }
         else {
-            finalStatus = 'alert_failed';
+            finalStatus = "alert_failed";
         }
         // Ghi trạng thái cuối cùng (finalStatus + resolvedAt)
         await targetEventRef.set({
@@ -290,7 +295,7 @@ async function processSingleUserCheckIn(params) {
             recipients: recipientResults,
         }, { merge: true });
         return {
-            action: 'TRIGGER_REAL_ALERT',
+            action: "TRIGGER_REAL_ALERT",
             status: finalStatus,
             eventId,
             recipientsCount: sentCount,
@@ -308,21 +313,28 @@ async function processSingleUserCheckIn(params) {
 exports.checkOverdueDeadManSwitch = (0, scheduler_1.onSchedule)({
     // Production Cloud Scheduler cadence. The local demo invokes this processing
     // logic through runOverdueDemoCheck because the Emulator does not run schedules.
-    schedule: 'every 15 minutes',
-    timeZone: 'Asia/Ho_Chi_Minh',
+    schedule: "every 15 minutes",
+    timeZone: "Asia/Ho_Chi_Minh",
     retryCount: 1,
-    memory: '256MiB',
+    memory: "256MiB",
     // Khai báo secrets để Firebase Runtime inject vào process.env khi Function chạy.
     // Secrets được lưu mã hoá trong Google Secret Manager — không bao giờ xuất hiện trong logs hoặc mã nguồn.
-    secrets: ['SEND_REAL_ALERTS', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'],
+    secrets: [
+        "SEND_REAL_ALERTS",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_FROM",
+    ],
 }, async () => {
     const db = (0, firestore_1.getFirestore)();
     const now = new Date();
     const emailService = new emailService_1.EmailService();
     logger.info(`[DeadManSwitch] Bắt đầu chu kỳ quét định kỳ lúc: ${now.toISOString()}`);
     try {
-        const settingsSnapshot = await db.collectionGroup('settings').get();
-        const checkInDocs = settingsSnapshot.docs.filter((doc) => doc.id === 'checkin');
+        const settingsSnapshot = await db.collectionGroup("settings").get();
+        const checkInDocs = settingsSnapshot.docs.filter((doc) => doc.id === "checkin");
         logger.info(`[DeadManSwitch] Tìm thấy ${checkInDocs.length} tài khoản có cấu hình check-in.`);
         let processedCount = 0;
         let gracePeriodCount = 0;
@@ -339,19 +351,20 @@ exports.checkOverdueDeadManSwitch = (0, scheduler_1.onSchedule)({
                 now,
                 emailService,
             });
-            if (result.action === 'START_GRACE_PERIOD')
+            if (result.action === "START_GRACE_PERIOD")
                 gracePeriodCount++;
-            if (result.action === 'TRIGGER_DRY_RUN' || result.action === 'TRIGGER_REAL_ALERT') {
+            if (result.action === "TRIGGER_DRY_RUN" ||
+                result.action === "TRIGGER_REAL_ALERT") {
                 alertTriggeredCount++;
             }
-            if (result.action === 'CANCEL_ALERT')
+            if (result.action === "CANCEL_ALERT")
                 cancelledCount++;
             processedCount++;
         }
         logger.info(`[DeadManSwitch] Hoàn thành chu kỳ quét: Đã duyệt ${processedCount} tài khoản (Gia hạn: ${gracePeriodCount}, Kích hoạt cảnh báo: ${alertTriggeredCount}, Tự động huỷ: ${cancelledCount}).`);
     }
     catch (err) {
-        logger.error('[DeadManSwitch] Lỗi trong quá trình quét định kỳ:', err);
+        logger.error("[DeadManSwitch] Lỗi trong quá trình quét định kỳ:", err);
         throw err;
     }
 });
@@ -363,20 +376,30 @@ exports.checkOverdueDeadManSwitch = (0, scheduler_1.onSchedule)({
  */
 exports.runOverdueDemoCheck = (0, https_1.onCall)({
     timeoutSeconds: 30,
-    secrets: ['SEND_REAL_ALERTS', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'],
+    secrets: [
+        "SEND_REAL_ALERTS",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_FROM",
+    ],
 }, async (request) => {
-    if (process.env.FUNCTIONS_EMULATOR !== 'true') {
-        throw new https_1.HttpsError('failed-precondition', 'Chức năng này chỉ dùng cho demo trên Firebase Emulator.');
+    if (process.env.FUNCTIONS_EMULATOR !== "true") {
+        throw new https_1.HttpsError("failed-precondition", "Chức năng này chỉ dùng cho demo trên Firebase Emulator.");
     }
     const uid = request.auth?.uid;
     if (!uid) {
-        throw new https_1.HttpsError('unauthenticated', 'Vui lòng đăng nhập để chạy demo.');
+        throw new https_1.HttpsError("unauthenticated", "Vui lòng đăng nhập để chạy demo.");
     }
     const db = (0, firestore_1.getFirestore)();
-    const userRef = db.collection('users').doc(uid);
-    const settingsDoc = await userRef.collection('settings').doc('checkin').get();
+    const userRef = db.collection("users").doc(uid);
+    const settingsDoc = await userRef
+        .collection("settings")
+        .doc("checkin")
+        .get();
     if (!settingsDoc.exists) {
-        throw new https_1.HttpsError('not-found', 'Không tìm thấy cấu hình check-in của tài khoản.');
+        throw new https_1.HttpsError("not-found", "Không tìm thấy cấu hình check-in của tài khoản.");
     }
     const result = await processSingleUserCheckIn({
         db,

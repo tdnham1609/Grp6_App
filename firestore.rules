@@ -162,14 +162,34 @@ service cloud.firestore {
             && (data.consentStatus == oldData.consentStatus || (data.consentStatus == 'pending'));
         }
 
+        function isVerifiedRecipientUpdate() {
+          let data = request.resource.data;
+          let oldData = resource.data;
+          return request.auth != null
+            && request.auth.token.email_verified == true
+            && request.auth.token.email == oldData.email
+            && data.diff(oldData).affectedKeys().hasOnly([
+              'emailVerified',
+              'consentStatus',
+              'consentUpdatedAt',
+              'updatedAt'
+            ])
+            && data.emailVerified == true
+            && data.consentStatus in ['accepted', 'declined', 'revoked'];
+        }
+
         // ĐỌC: chỉ chủ sở hữu
-        allow read: if isOwner();
+        allow read: if isOwner()
+          || (request.auth != null
+            && request.auth.token.email_verified == true
+            && request.auth.token.email == resource.data.email);
 
         // TẠO MỚI: chỉ chủ sở hữu và dữ liệu hợp lệ
         allow create: if isOwner() && isValidContactCreate();
 
         // CẬP NHẬT: chỉ chủ sở hữu và không được giả mạo server verification
-        allow update: if isOwner() && isValidContactUpdate();
+        allow update: if (isOwner() && isValidContactUpdate())
+          || isVerifiedRecipientUpdate();
 
         // XÓA: chỉ chủ sở hữu được xóa liên hệ của mình
         allow delete: if isOwner();
@@ -197,6 +217,46 @@ service cloud.firestore {
       // Cho phép tài khoản đã đăng nhập đọc để tránh chặn truy vấn dashboard.
       allow read: if request.auth != null;
       allow create, update: if isOwner() && isValidStatus();
+      allow delete: if false;
+    }
+
+    // Lời mời liên hệ do chủ tài khoản tạo; người nhận chỉ được đọc lời mời
+    // của đúng Gmail đã xác minh và cập nhật consent của chính mình.
+    match /contactInvitations/{invitationId} {
+      function isInvitationOwner() {
+        return request.auth != null
+          && request.auth.uid == resource.data.ownerUid;
+      }
+
+      function isRecipientRead() {
+        return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email == resource.data.recipientEmail;
+      }
+
+      function isRecipientConsentUpdate() {
+        let data = request.resource.data;
+        let oldData = resource.data;
+        return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email == oldData.recipientEmail
+          && data.diff(oldData).affectedKeys().hasOnly([
+            'emailVerified',
+            'consentStatus',
+            'updatedAt'
+          ])
+          && data.emailVerified == true
+          && data.consentStatus in ['accepted', 'declined', 'revoked'];
+      }
+
+      allow read: if isInvitationOwner() || isRecipientRead();
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.ownerUid
+        && request.resource.data.ownerUid is string
+        && request.resource.data.recipientEmail is string;
+      allow update: if (request.auth != null
+          && request.auth.uid == resource.data.ownerUid)
+        || isRecipientConsentUpdate();
       allow delete: if false;
     }
 
