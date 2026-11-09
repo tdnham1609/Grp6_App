@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -43,6 +45,16 @@ class TrustedPerson {
   }
 }
 
+class TrustedContactDashboardData {
+  final List<TrustedPerson> people;
+  final List<Map<String, dynamic>> invitations;
+
+  const TrustedContactDashboardData({
+    required this.people,
+    required this.invitations,
+  });
+}
+
 class TrustedContactDashboardService {
   TrustedContactDashboardService._();
 
@@ -66,6 +78,72 @@ class TrustedContactDashboardService {
         .where('recipientEmail', isEqualTo: email)
         .get();
 
+    return _invitationsFromSnapshot(snapshot);
+  }
+
+  Stream<TrustedContactDashboardData> watchDashboard() {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email?.trim().toLowerCase();
+    if (user == null || email == null || email.isEmpty) {
+      return Stream.value(
+        const TrustedContactDashboardData(people: [], invitations: []),
+      );
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final invitationQuery = firestore
+        .collection('contactInvitations')
+        .where('recipientEmail', isEqualTo: email);
+    final statusQuery = firestore
+        .collection('trustedStatuses')
+        .where('trustedEmails', arrayContains: email);
+    final controller = StreamController<TrustedContactDashboardData>();
+
+    QuerySnapshot<Map<String, dynamic>>? invitationSnapshot;
+    QuerySnapshot<Map<String, dynamic>>? statusSnapshot;
+    void emitIfReady() {
+      if (controller.isClosed ||
+          invitationSnapshot == null ||
+          statusSnapshot == null) {
+        return;
+      }
+      controller.add(
+        _dashboardFromSnapshots(invitationSnapshot!, statusSnapshot!),
+      );
+    }
+
+    final invitationSubscription = invitationQuery.snapshots().listen(
+      (snapshot) {
+        invitationSnapshot = snapshot;
+        emitIfReady();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!controller.isClosed) controller.addError(error, stackTrace);
+      },
+    );
+    final statusSubscription = statusQuery.snapshots().listen(
+      (snapshot) {
+        statusSnapshot = snapshot;
+        emitIfReady();
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!controller.isClosed) controller.addError(error, stackTrace);
+      },
+    );
+
+    controller.onCancel = () async {
+      await Future.wait([
+        invitationSubscription.cancel(),
+        statusSubscription.cancel(),
+      ]);
+    };
+
+    return controller.stream;
+  }
+
+  List<Map<String, dynamic>> _invitationsFromSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
     return snapshot.docs.map((document) {
       final data = document.data();
       data['id'] = document.id;
@@ -83,14 +161,25 @@ class TrustedContactDashboardService {
         .collection('contactInvitations')
         .where('recipientEmail', isEqualTo: email)
         .get();
+    final statusSnapshot = await firestore
+        .collection('trustedStatuses')
+        .where('trustedEmails', arrayContains: email)
+        .get();
+    return _dashboardFromSnapshots(invitationSnapshot, statusSnapshot).people;
+  }
 
-    final invited = <TrustedPerson>{};
+  TrustedContactDashboardData _dashboardFromSnapshots(
+    QuerySnapshot<Map<String, dynamic>> invitationSnapshot,
+    QuerySnapshot<Map<String, dynamic>> statusSnapshot,
+  ) {
+    final peopleByOwnerUid = <String, TrustedPerson>{};
     for (final document in invitationSnapshot.docs) {
       final data = document.data();
       if (data['consentStatus'] == 'accepted' &&
           data['emailVerified'] == true) {
-        invited.add(TrustedPerson(
-          ownerUid: data['ownerUid']?.toString() ?? '',
+        final ownerUid = data['ownerUid']?.toString() ?? '';
+        peopleByOwnerUid[ownerUid] = TrustedPerson(
+          ownerUid: ownerUid,
           ownerName: data['ownerName']?.toString() ?? 'Người cần theo dõi',
           relationship: data['relationship']?.toString() ?? 'Người thân',
           lastCheckInAt: (data['lastCheckInAt'] as Timestamp?)?.toDate().toLocal(),
@@ -102,16 +191,11 @@ class TrustedContactDashboardService {
                   ? 'overdue'
                   : 'safe',
           latestAlertStatus: data['latestAlertStatus']?.toString(),
-        ));
+        );
       }
     }
 
-    final snapshot = await firestore
-        .collection('trustedStatuses')
-        .where('trustedEmails', arrayContains: email)
-        .get();
-
-    for (final document in snapshot.docs) {
+    for (final document in statusSnapshot.docs) {
       final data = document.data();
       final nextDue = data['nextCheckInDueAt'] as Timestamp?;
       final lastCheckIn = data['lastCheckInAt'] as Timestamp?;
@@ -124,7 +208,7 @@ class TrustedContactDashboardService {
           ? 'overdue'
           : 'safe';
 
-      invited.add(TrustedPerson(
+      peopleByOwnerUid[document.id] = TrustedPerson(
         ownerUid: document.id,
         ownerName: data['ownerName']?.toString() ?? 'Người cần theo dõi',
         relationship: data['relationship']?.toString() ?? 'Người thân',
@@ -133,10 +217,13 @@ class TrustedContactDashboardService {
         isDeadManSwitchActive: active,
         status: status,
         latestAlertStatus: data['latestAlertStatus']?.toString(),
-      ));
+      );
     }
 
-    return invited.toList();
+    return TrustedContactDashboardData(
+      people: peopleByOwnerUid.values.toList(),
+      invitations: _invitationsFromSnapshot(invitationSnapshot),
+    );
   }
 
   Future<void> acceptInvitation(String ownerUid, String contactId) async {
@@ -241,24 +328,24 @@ class TrustedContactDashboardService {
           .collection('contactInvitations')
           .doc('${user.uid}_${contact.id}')
           .set({
-        'ownerUid': user.uid,
-        'contactId': contact.id,
-        'ownerName': user.displayName ?? 'Người cần theo dõi',
-        'recipientName': data['name']?.toString() ?? '',
-        'recipientEmail': email,
-        'relationship': data['relationship']?.toString() ?? 'Người thân',
-        'isActive': data['isActive'] != false,
-        'emailVerified': data['emailVerified'] == true,
-        'consentStatus': data['consentStatus']?.toString() ?? 'pending',
-        'lastCheckInAt': config.lastCheckInAt == null
-            ? null
-            : Timestamp.fromDate(config.lastCheckInAt!),
-        'nextCheckInDueAt': config.nextCheckInDueAt == null
-            ? null
-            : Timestamp.fromDate(config.nextCheckInDueAt!),
-        'isDeadManSwitchActive': config.isDeadManSwitchActive,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+            'ownerUid': user.uid,
+            'contactId': contact.id,
+            'ownerName': user.displayName ?? 'Người cần theo dõi',
+            'recipientName': data['name']?.toString() ?? '',
+            'recipientEmail': email,
+            'relationship': data['relationship']?.toString() ?? 'Người thân',
+            'isActive': data['isActive'] != false,
+            'emailVerified': data['emailVerified'] == true,
+            'consentStatus': data['consentStatus']?.toString() ?? 'pending',
+            'lastCheckInAt': config.lastCheckInAt == null
+                ? null
+                : Timestamp.fromDate(config.lastCheckInAt!),
+            'nextCheckInDueAt': config.nextCheckInDueAt == null
+                ? null
+                : Timestamp.fromDate(config.nextCheckInDueAt!),
+            'isDeadManSwitchActive': config.isDeadManSwitchActive,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
     }
   }
 }

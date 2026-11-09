@@ -159,7 +159,16 @@ class AuthService {
           e.toString().contains('cancelled')) {
         return null;
       }
-      throw 'Đăng nhập Google thất bại: ${e.toString()}';
+      final message = e.toString();
+      if (message.contains('DEVELOPER_ERROR') ||
+          message.contains('12500') ||
+          message.contains('10:')) {
+        throw 'Google Sign-In bị từ chối do chữ ký Android chưa khớp cấu hình Firebase OAuth. SHA-1 ứng dụng hiện tại là B2:3A:80:FF:37:59:24:B4:FD:31:79:61:DC:73:27:3F:B7:65:AF:B8.';
+      }
+      if (message.contains('network_error') || message.contains('7:')) {
+        throw 'Không thể kết nối Google. Kiểm tra mạng và thử lại.';
+      }
+      throw 'Đăng nhập Google thất bại: $message';
     }
   }
 

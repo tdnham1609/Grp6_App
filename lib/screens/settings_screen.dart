@@ -1214,12 +1214,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: teal,
                           ),
                           title: const Text('Về ứng dụng Sinh Tử'),
-                          subtitle: const Text('Phiên bản 1.1.2'),
+                          subtitle: const Text('Phiên bản 1.1.4'),
                           onTap: () {
                             showAboutDialog(
                               context: context,
                               applicationName: 'Sinh Tử',
-                              applicationVersion: '1.1.2',
+                              applicationVersion: '1.1.4',
                               applicationIcon: Image.asset(
                                 'assets/images/logo.jpg',
                                 width: 48,

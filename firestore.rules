@@ -220,8 +220,8 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Lời mời liên hệ do chủ tài khoản tạo; người nhận chỉ được đọc lời mời
-    // của đúng Gmail đã xác minh và cập nhật consent của chính mình.
+    // Lời mời liên hệ do chủ tài khoản tạo; chỉ tài khoản có email khớp mới
+    // được đọc. Người nhận cần xác minh email trước khi cập nhật consent.
     match /contactInvitations/{invitationId} {
       function isInvitationOwner() {
         return request.auth != null
@@ -230,7 +230,6 @@ service cloud.firestore {
 
       function isRecipientRead() {
         return request.auth != null
-          && request.auth.token.email_verified == true
           && request.auth.token.email == resource.data.recipientEmail;
       }
 

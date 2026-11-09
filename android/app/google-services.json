@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "968316148144-5tcie177p7ufpdg1qv8pfstcf5dfg8vs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.deadmansswitch",
+            "certificate_hash": "b23a80ff375924b4fd317961dc73273fb765afb8"
+          }
+        },
+        {
           "client_id": "968316148144-q1jf8dfhnlv72eekpos3boif8ufnm8nm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

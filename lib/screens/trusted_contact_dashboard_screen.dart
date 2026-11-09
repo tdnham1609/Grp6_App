@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,11 +20,49 @@ class _TrustedContactDashboardScreenState
   String? _error;
   List<TrustedPerson> _people = [];
   List<Map<String, dynamic>> _invitations = [];
+  StreamSubscription<TrustedContactDashboardData>? _dashboardSubscription;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _watchDashboard();
+  }
+
+  @override
+  void dispose() {
+    _dashboardSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _watchDashboard() {
+    if (Firebase.apps.isEmpty) {
+      setState(() {
+        _error = 'Firebase chưa được khởi tạo.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _dashboardSubscription = TrustedContactDashboardService.instance
+        .watchDashboard()
+        .listen(
+          (dashboard) {
+            if (!mounted) return;
+            setState(() {
+              _people = dashboard.people;
+              _invitations = dashboard.invitations;
+              _error = null;
+              _isLoading = false;
+            });
+          },
+          onError: (Object error) {
+            if (!mounted) return;
+            setState(() {
+              _error = error.toString();
+              _isLoading = false;
+            });
+          },
+        );
   }
 
   Future<void> _load() async {
